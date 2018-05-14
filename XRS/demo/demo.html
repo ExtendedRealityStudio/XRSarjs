@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
+<script src='vendor/three.js/build/three.min.js'></script>
+<script src="vendor/three.js/examples/js/loaders/OBJLoader.js"></script>
+<script src="vendor/three.js/examples/js/loaders/MTLLoader.js"></script>
+<script src="../build/ar.js"></script>
+<script>THREEx.ArToolkitContext.baseURL = '../'</script>
+
+<body style='margin : 0px; overflow: hidden; font-family: Monospace;'>
+    <script>
+        //////////////////////////////////////////////////////////////
+        // Three.js
+        //////////////////////////////////////////////////////////////
+        var renderer = new THREE.WebGLRenderer({alpha: true});
+        renderer.setClearColor(new THREE.Color('white'), 0);
+        renderer.setSize( window.innerWidth, window.innerHeight );
+        renderer.domElement.style.position = 'absolute'
+        renderer.domElement.style.top = '0px'
+        renderer.domElement.style.left = '0px'
+        document.body.appendChild( renderer.domElement );
+
+        var onRenderFcts = [];
+
+        var scene = new THREE.Scene();
+
+        var camera = new THREE.Camera();
+        scene.add(camera);
+
+        //////////////////////////////////////////////////////////////
+        // ARToolKit
+        //////////////////////////////////////////////////////////////
+        var arToolkitSource = new THREEx.ArToolkitSource({sourceType : 'webcam'});
+        arToolkitSource.init(function onReady(){onResize();});
+        window.addEventListener('resize', function(){onResize();});
+        function onResize(){
+            arToolkitSource.onResize()	
+            arToolkitSource.copySizeTo(renderer.domElement)	
+            if( arToolkitContext.arController !== null ){
+                arToolkitSource.copySizeTo(arToolkitContext.arController.canvas)	
+            }
+        }
+        
+        var arToolkitContext = new THREEx.ArToolkitContext({
+            cameraParametersUrl: THREEx.ArToolkitContext.baseURL + '../data/data/camera_para.dat',
+            detectionMode: 'mono',
+            maxDetectionRate: 30,
+            canvasWidth: 80*3,
+            canvasHeight: 60*3
+        });
+        arToolkitContext.init(function onCompleted(){
+            camera.projectionMatrix.copy(arToolkitContext.getProjectionMatrix());
+        });
+        onRenderFcts.push(function(){
+            if(arToolkitSource.ready === false) return;
+            arToolkitContext.update(arToolkitSource.domElement);
+        });
+
+        //////////////////////////////////////////////////////////////
+        // Marker
+        //////////////////////////////////////////////////////////////
+        var markerRoot = new THREE.Group();
+        scene.add(markerRoot);
+        var artoolkitMarker = new THREEx.ArMarkerControls(arToolkitContext, markerRoot, {
+            type : 'pattern',
+            patternUrl : THREEx.ArToolkitContext.baseURL + '../data/data/XRSmarker.patt'
+        });
+        
+        var smoothedRoot = new THREE.Group();
+        scene.add(smoothedRoot);
+        var smoothedControls = new THREEx.ArSmoothedControls(smoothedRoot, {
+            lerpPosition: 0.4,
+            lerpQuaternion: 0.3,
+            lerpScale: 1
+        });
+        onRenderFcts.push(function(delta){
+            smoothedControls.update(markerRoot);
+        });
+
+        //////////////////////////////////////////////////////////////
+        // Object
+        //////////////////////////////////////////////////////////////
+        var arWorldRoot = smoothedRoot;
+        var geometryCube = new THREE.CubeGeometry(1,1,1);
+        var materialCube = new THREE.MeshBasicMaterial({
+            transparent : true,
+            opacity: 0.3,
+            color: 0x00ff00,
+            side: THREE.DoubleSide
+        });
+        var meshCube = new THREE.Mesh(geometryCube, materialCube);
+        meshCube.scale.set(1.1,1.1,1.1);
+        meshCube.position.y = geometryCube.parameters.height/2;
+        arWorldRoot.add(meshCube);
+        
+        var mtlLoader = new THREE.MTLLoader();
+        mtlLoader.setBaseUrl('../models/');
+        mtlLoader.setPath('../models/');
+        mtlLoader.load('SM_TXT_XRS_Logo.mtl', function(materials){
+            materials.preload();
+
+            var objLoader = new THREE.OBJLoader();
+            objLoader.setMaterials(materials);
+            objLoader.load(
+                '../models/SM_TXT_XRS_Logo.obj',
+                function(object){
+                    //onLoaded
+                    object.scale.set(0.03,0.03,0.03);
+                    object.position.x -= 0.5;
+                    object.position.y += 0.5;
+                    object.rotation.x -= THREE.Math.degToRad(90);
+                    arWorldRoot.add(object);
+                },
+                function(xhr){
+                    //onProgress
+                    console.log((xhr.loaded/xhr.total*100)+'% loaded');
+                },
+                function(error){
+                    console.log('cannot load model');
+                }
+            );
+
+        });
+
+        
+
+        //var geometryObj = new THREE.TorusKnotGeometry(0.3,0.1,64,16);
+        //var materialObj = new THREE.MeshNormalMaterial();
+        //var meshObj = new THREE.Mesh(geometryObj, materialObj);
+        //meshObj.position.y = 0.5;
+        //arWorldRoot.add(meshObj);
+
+        //onRenderFcts.push(function(){
+        //    meshObj.rotation.x += 0.1;
+        //});
+
+        //////////////////////////////////////////////////////////////
+        // Rendering
+        //////////////////////////////////////////////////////////////
+        onRenderFcts.push(function(){
+            renderer.render(scene, camera);
+        });
+
+        var lastTimeMsec = null;
+        requestAnimationFrame(function animate(nowMsec){
+            requestAnimationFrame(animate);
+            lastTimeMsec = lastTimeMsec || nowMsec-1000/60;
+            var deltaMsec = Math.min(200, nowMsec - lastTimeMsec);
+            lastTimeMsec = nowMsec;
+
+            onRenderFcts.forEach(function(onRenderFct){
+                onRenderFct(deltaMsec/1000, nowMsec/1000);
+            });
+        });
+    </script>
+</body>
