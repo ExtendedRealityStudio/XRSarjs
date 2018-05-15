@@ -11,6 +11,7 @@
         //////////////////////////////////////////////////////////////
         // Three.js
         //////////////////////////////////////////////////////////////
+        var cubeRadius = 0.5;
         var renderer = new THREE.WebGLRenderer({alpha: true});
         renderer.setClearColor(new THREE.Color('white'), 0);
         renderer.setSize( window.innerWidth, window.innerHeight );
@@ -25,6 +26,8 @@
 
         var camera = new THREE.Camera();
         scene.add(camera);
+
+        mixer = new THREE.AnimationMixer(scene);
 
         //////////////////////////////////////////////////////////////
         // ARToolKit
@@ -85,18 +88,8 @@
         });
 
         //////////////////////////////////////////////////////////////
-        // Audio
-        //////////////////////////////////////////////////////////////
-        //var audio = document.createElement('audio');
-        //var source = document.createElement('source');
-        //source.src = '../sound/hit.mp3';
-        //audio.appendChild(source);
-
-        //////////////////////////////////////////////////////////////
         // Object
         //////////////////////////////////////////////////////////////
-        
-        var cubeRadius = 0.5;
 
         function BouncingBall(){
             this.radius = 0.15;
@@ -209,16 +202,6 @@
             
         });
 
-        //var geometryObj = new THREE.TorusKnotGeometry(0.3,0.1,64,16);
-        //var materialObj = new THREE.MeshNormalMaterial();
-        //var meshObj = new THREE.Mesh(geometryObj, materialObj);
-        //meshObj.position.y = 0.5;
-        //arWorldRoot.add(meshObj);
-
-        //onRenderFcts.push(function(){
-        //    meshObj.rotation.x += 0.1;
-        //});
-
         //////////////////////////////////////////////////////////////
         // Rendering
         //////////////////////////////////////////////////////////////
@@ -233,7 +216,7 @@
             lastTimeMsec = lastTimeMsec || nowMsec-1000/60;
             var deltaMsec = Math.min(200, nowMsec - lastTimeMsec);
             lastTimeMsec = nowMsec;
-
+                              
             onRenderFcts.forEach(function(onRenderFct){
                 onRenderFct(deltaMsec/1000, nowMsec/1000);
             });
