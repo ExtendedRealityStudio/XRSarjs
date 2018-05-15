@@ -58,12 +58,20 @@
         //////////////////////////////////////////////////////////////
         // Marker
         //////////////////////////////////////////////////////////////
+        var bTracking = false;
         var markerRoot = new THREE.Group();
         scene.add(markerRoot);
         var artoolkitMarker = new THREEx.ArMarkerControls(arToolkitContext, markerRoot, {
             type : 'pattern',
             patternUrl : THREEx.ArToolkitContext.baseURL + '../data/data/XRSmarker.patt'
         });
+        
+        artoolkitMarker.addEventListener('markerFound', function(event){
+                                         bTracking = true;
+                                         });
+        artoolkitMarker.addEventListener('markerLost', function(event){
+                                         bTracking = false;
+                                        });
         
         var smoothedRoot = new THREE.Group();
         scene.add(smoothedRoot);
@@ -75,6 +83,14 @@
         onRenderFcts.push(function(delta){
             smoothedControls.update(markerRoot);
         });
+
+        //////////////////////////////////////////////////////////////
+        // Audio
+        //////////////////////////////////////////////////////////////
+        //var audio = document.createElement('audio');
+        //var source = document.createElement('source');
+        //source.src = '../sound/hit.mp3';
+        //audio.appendChild(source);
 
         //////////////////////////////////////////////////////////////
         // Object
@@ -101,18 +117,33 @@
                             });
             this.mesh =  new THREE.Mesh(this.geometry, this.material);
 
+            this.addAudioEffect = function(){
+                this.audio = new Audio();
+                this.audioSrc = document.createElement("source");
+                this.audioSrc.src = '../sound/hit.mp3';
+                this.audio.appendChild(this.audioSrc);
+            };
+            this.addAudioEffect();
+
             this.update = function(){
                 this.mesh.position.x += this.speed.x;
                 this.mesh.position.y += this.speed.y;
                 this.mesh.position.z += this.speed.z;
+                var bHit = false;
                 if(this.mesh.position.x > cubeRadius || this.mesh.position.x < (-cubeRadius)){
                     this.speed.x *= -1.0;
+                    bHit = true;
                 }
                 if(this.mesh.position.y > cubeRadius || this.mesh.position.y < (-cubeRadius)){
                     this.speed.y *= -1.0;
+                    bHit = true;
                 }
                 if(this.mesh.position.z > cubeRadius || this.mesh.position.z < (-cubeRadius)){
                     this.speed.z *= -1.0;
+                    bHit = true;
+                }
+                if(bHit && bTracking){
+                    this.audio.play();
                 }
             };
         }
@@ -197,6 +228,7 @@
 
         var lastTimeMsec = null;
         requestAnimationFrame(function animate(nowMsec){
+            bTracking = false;
             requestAnimationFrame(animate);
             lastTimeMsec = lastTimeMsec || nowMsec-1000/60;
             var deltaMsec = Math.min(200, nowMsec - lastTimeMsec);
