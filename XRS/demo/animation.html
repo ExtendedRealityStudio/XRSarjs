@@ -1,168 +1,133 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
     <head>
-        <meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
-        <script src='vendor/three.js/build/three.min.js'></script>
-        <script src="vendor/three.js/examples/js/loaders/FBXLoader.js"></script>
-        <script src="../build/ar.js"></script>
-        <script>THREEx.ArToolkitContext.baseURL = '../'</script>
-    </head>
+        <title>three.js webgl - FBX loader</title>
+        <meta charset="utf-8">
+            <meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
+                <style>
+                    body {
+                        font-family: Monospace;
+                        background-color: #000;
+                        color: #fff;
+                        margin: 0px;
+                        overflow: hidden;
+                    }
+                #info {
+                    color: #fff;
+                    position: absolute;
+                    top: 10px;
+                    width: 100%;
+                    text-align: center;
+                    z-index: 100;
+                    display:block;
+                }
+                #info a {
+                    color: #046;
+                    font-weight: bold;
+                }
+                </style>
+                </head>
+    
     <body>
+        <div id="info">
+            <a href="http://threejs.org" target="_blank" rel="noopener">three.js</a> - FBXLoader<br />
+            Character and animation from <a href="https://www.mixamo.com/" target="_blank" rel="noopener">Mixamo</a>
+        </div>
+        
+        <script src="vendor/three.js/build/three.min.js"></script>
+        
+        <script src="https://threejs.org/examples/js/libs/inflate.min.js"></script>
+        <script src="vendor/three.js/examples/js/loaders/FBXLoader.js"></script>
+        
+        <script src="vendor/three.js/examples/js/controls/OrbitControls.js"></script>
+        
+        <script src="https://threejs.org/examples/js/Detector.js"></script>
+        <script src="https://threejs.org/examples/js/libs/stats.min.js"></script>
+        
         <script>
-        //Three.js
-        var cubeRadius = 0.5;
-        var renderer;
-        var onRenderFcts = [];
-        var scene;
-        var camera;
-        var controls;
-        
-        //Artoolkit
-        var arToolkitSource;
-        var arToolkitContext
-        
-        //marker
-        var bTracking = false;
-        var markerRoot;
-        var artoolkitMarker;
-        var smoothedRoot;
-        var smoothedControls;
-        
-        var arWorldRoot;
-        var mixers = [];
-        var clock = new THREE.Clock();
-        
-        var lastTimeMsec = null;
-        
-        function initThreeJs(){
-            renderer = new THREE.WebGLRenderer({alpha: true});
-            renderer.setClearColor(new THREE.Color('white'), 0);
-            renderer.setSize( window.innerWidth, window.innerHeight );
-            renderer.domElement.style.position = 'absolute'
-            renderer.domElement.style.top = '0px'
-            renderer.domElement.style.left = '0px'
-            document.body.appendChild( renderer.domElement );
-            
-            scene = new THREE.Scene();
-            camera = new THREE.Camera();
-            
-            scene.add(camera);
-        }
-        
-        function initARToolKit(){
-            arToolkitSource = new THREEx.ArToolkitSource({sourceType : 'webcam'});
-            arToolkitSource.init(function onReady(){onResize();});
-            window.addEventListener('resize', function(){onResize();});
-            
-            arToolkitContext = new THREEx.ArToolkitContext({
-                                                           cameraParametersUrl: THREEx.ArToolkitContext.baseURL + '../data/data/camera_para.dat',
-                                                           detectionMode: 'mono',
-                                                           maxDetectionRate: 30,
-                                                           canvasWidth: 80*3,
-                                                           canvasHeight: 60*3
-                                                           });
-                                                           
-            arToolkitContext.init(function onCompleted(){
-                                  camera.projectionMatrix.copy(arToolkitContext.getProjectionMatrix());
-                                  });
-            onRenderFcts.push(function(){
-                              if(arToolkitSource.ready === false) return;
-                              arToolkitContext.update(arToolkitSource.domElement);
-                              });
-                                                           
-        }
-        
-        function onResize(){
-            arToolkitSource.onResize()
-            arToolkitSource.copySizeTo(renderer.domElement)
-            if( arToolkitContext.arController !== null ){
-                arToolkitSource.copySizeTo(arToolkitContext.arController.canvas)
+            if ( ! Detector.webgl ) Detector.addGetWebGLMessage();
+            var container, stats, controls;
+            var camera, scene, renderer, light;
+            var clock = new THREE.Clock();
+            var mixers = [];
+            init();
+            animate();
+            function init() {
+                container = document.createElement( 'div' );
+                document.body.appendChild( container );
+                camera = new THREE.PerspectiveCamera( 45, window.innerWidth / window.innerHeight, 1, 2000 );
+                camera.position.set( 100, 200, 300 );
+                controls = new THREE.OrbitControls( camera );
+                controls.target.set( 0, 100, 0 );
+                controls.update();
+                scene = new THREE.Scene();
+                scene.background = new THREE.Color( 0xa0a0a0 );
+                scene.fog = new THREE.Fog( 0xa0a0a0, 200, 1000 );
+                light = new THREE.HemisphereLight( 0xffffff, 0x444444 );
+                light.position.set( 0, 200, 0 );
+                scene.add( light );
+                light = new THREE.DirectionalLight( 0xffffff );
+                light.position.set( 0, 200, 100 );
+                light.castShadow = true;
+                light.shadow.camera.top = 180;
+                light.shadow.camera.bottom = -100;
+                light.shadow.camera.left = -120;
+                light.shadow.camera.right = 120;
+                scene.add( light );
+                // scene.add( new THREE.CameraHelper( light.shadow.camera ) );
+                // ground
+                var mesh = new THREE.Mesh( new THREE.PlaneBufferGeometry( 2000, 2000 ), new THREE.MeshPhongMaterial( { color: 0x999999, depthWrite: false } ) );
+                mesh.rotation.x = - Math.PI / 2;
+                mesh.receiveShadow = true;
+                scene.add( mesh );
+                var grid = new THREE.GridHelper( 2000, 20, 0x000000, 0x000000 );
+                grid.material.opacity = 0.2;
+                grid.material.transparent = true;
+                scene.add( grid );
+                // model
+                var loader = new THREE.FBXLoader();
+                loader.load( '../models/Samba_Dancing.fbx', function ( object ) {
+                            console.log("cippa");
+                            object.mixer = new THREE.AnimationMixer( object );
+                            mixers.push( object.mixer );
+                            var action = object.mixer.clipAction( object.animations[ 0 ] );
+                            action.play();
+                            object.traverse( function ( child ) {
+                                            if ( child.isMesh ) {
+                                            child.castShadow = true;
+                                            child.receiveShadow = true;
+                                            }
+                                            } );
+                            scene.add( object );
+                            } );
+                            renderer = new THREE.WebGLRenderer( { antialias: true } );
+                            renderer.setPixelRatio( window.devicePixelRatio );
+                            renderer.setSize( window.innerWidth, window.innerHeight );
+                            renderer.shadowMap.enabled = true;
+                            container.appendChild( renderer.domElement );
+                            window.addEventListener( 'resize', onWindowResize, false );
+                            // stats
+                            stats = new Stats();
+                            container.appendChild( stats.dom );
             }
+        function onWindowResize() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize( window.innerWidth, window.innerHeight );
         }
-        
-        function initMarker(){
-            markerRoot = new THREE.Group();
-            scene.add(markerRoot);
-            
-            artoolkitMarker = new THREEx.ArMarkerControls(arToolkitContext, markerRoot, {
-                                                          type : 'pattern',
-                                                          patternUrl : THREEx.ArToolkitContext.baseURL + '../data/data/XRSmarker.patt'
-                                                          });
-            artoolkitMarker.addEventListener('markerFound', function(event){bTracking=true;});
-            
-            smoothedRoot = new THREE.Group();
-            scene.add(smoothedRoot);
-            
-            smoothedControls = new THREEx.ArSmoothedControls(smoothedRoot, {
-                                                             lerpPosition: 0.4,
-                                                             lerpQuaternion: 0.3,
-                                                             lerpScale: 1
-                                                            });
-            onRenderFcts.push(function(delta){smoothedControls.update(markerRoot);});
-            
-        }
-        
-        function animate(nowMsec){
-            bTracking = false;
-            requestAnimationFrame(animate);
-            lastTimeMsec = lastTimeMsec || nowMsec-1000/60;
-            var deltaMsec = Math.min(200, nowMsec - lastTimeMsec);
-            lastTimeMsec = nowMsec;
-            
-            if(mixers.length>0){
-                for(var i=0;i<mixers.length;i++){
+        //
+        function animate() {
+            requestAnimationFrame( animate );
+            if ( mixers.length > 0 ) {
+                for ( var i = 0; i < mixers.length; i ++ ) {
                     mixers[ i ].update( clock.getDelta() );
                 }
             }
-            
-            onRenderFcts.forEach(function(onRenderFct){onRenderFct(deltaMsec/1000, nowMsec/1000)});
+            renderer.render( scene, camera );
+            stats.update();
         }
-        
-        function startLoop(){
-            onRenderFcts.push(function(){renderer.render(scene, camera);});
-            requestAnimationFrame(animate);
-        }
-        
-        function addObjects(){
-            arWorldRoot = smoothedRoot;
-            var geometryCube = new THREE.CubeGeometry(1,1,1);
-            var materialCube = new THREE.MeshBasicMaterial({
-                                                           transparent : true,
-                                                           opacity: 0.3,
-                                                           color: 0x00ff00,
-                                                           side: THREE.DoubleSide
-                                                           });
-            var meshCube = new THREE.Mesh(geometryCube, materialCube);
-            meshCube.scale.set(1.1,1.1,1.1);
-            meshCube.position.y = geometryCube.parameters.height/2;
-            
-            addAnimatedModel();
-        }
-        
-        function addAnimatedModel(){
-            var loader = new THREE.FBXLoader();
-            loader.load('../models/Samba_Dancing.fbx', function(object){
-                        object.scale.set(0.1,0.1,0.1);
-                        
-                        object.mixer = new THREE.AnimationMixer(object);
-                        mixers.push(object.mixer);
-                        
-                        var action = object.mixer.clipAction(object.animations[0]);
-                        action.play();
-                        
-                        arWorldRoot.add(object);
-                        });
-        }
-        
-        initThreeJs();
-        initARToolKit();
-        initMarker();
-        
-        addObjects();
-        
-        startLoop();
-
         </script>
+        
     </body>
 </html>
 
