@@ -1,7 +1,8 @@
 var AppStateEnum = {
     STATE_NEVER_FOUND_MARKER: 0,
-    STATE_START_FADE_IN: 1,
-    STATE_LOADING_SCENE: 2
+    STATE_LOADING_ASSETS: 1,
+    STATE_FADE_IN: 2,
+    STATE_LOOPING: 3
 };
 
 var curState = AppStateEnum.STATE_NEVER_FOUND_MARKER;
@@ -11,11 +12,25 @@ var meshStartLogo;
 var startTime;
 var stopTime;
 var fadeInTotTime = 1.0;
+var welcomeSndTime = 4.0;
+var welcomeSndStartTime;
+var welcomeSndStopTime;
+var bLoopSndStarted = false;
 var meshHelmet;
 var envMap;
 
+var audioWelcome;
+var audioLoop;
+
+var bLoadedModels = false;
+var bLoadedAudio = false;
+var bAudioLoadInited = false;
+
 function initDemo(){
-    
+   
+    document.addEventListener('click', onClick, false); 
+
+    //addAudio();
     addEnvMap();
     addLights();
     //makeUnderWorld();
@@ -23,8 +38,9 @@ function initDemo(){
     addModels();
 
     updateDemoFcts.push(updateNeverFoundMarker);
-    updateDemoFcts.push(updateStartFadeIn);
-    updateDemoFcts.push(updateLoadingScene);
+    updateDemoFcts.push(updateLoadingAssets);
+    updateDemoFcts.push(updateFadeIn);
+    updateDemoFcts.push(updateLooping);
 
     onRenderFcts.push(updateDemo);
 
@@ -199,11 +215,53 @@ function addModels(){
 					    }
 					});
                     meshHelmet = gltf.scene;
-                    meshHelmet.scale.set(0.5,0.5,0.5);
+                    //meshHelmet.scale.set(0.5,0.5,0.5);
+                    meshHelmet.scale.set(0,0,0);
                     meshHelmet.rotation.x -= THREE.Math.degToRad(90);
                     meshHelmet.position.y += 1;
-                    arWorldRoot.add( meshHelmet );
+                    //arWorldRoot.add( meshHelmet );
+
+                    bLoadedModels = true;
                 } );
+}
+
+function addAudio(){
+    audioWelcome = makeAudio("../../sound/AR_welcome.ogg", "../../sound/AR_welcome.wav");
+    audioLoop = makeAudio("../../sound/AR_atmospheric.ogg", "../../sound/AR_atmospheric.wav");
+    audioLoop.loop = true;
+    if(typeof audioLoop.loop == 'boolean'){
+        audioLoop.loop = true;
+    }else{
+        audioLoop.addEventListener('ended', function(){
+            audioLoop.currentTime = 0;
+            audioLoop.play();
+        }, false);
+    }
+
+    bLoadedAudio = true;
+}
+
+function makeAudio(_ogg, _wav){
+    var _audio = new Audio();
+    var srcOgg = document.createElement("source");
+    srcOgg.src = _ogg;
+    srcOgg.type = "audio/ogg";
+    var srcWav = document.createElement("source");
+    srcWav.src = _wav;
+    srcWav.type = "audio/wav";
+    _audio.appendChild(srcOgg);
+    _audio.appendChild(srcWav);
+    return _audio;
+}
+
+function startLoopSound(){
+    if(!bLoopSndStarted){
+        var now =  lastTimeMsec/1000;
+        if(now>welcomeSndStopTime){
+            audioLoop.play();
+            bLoopSndStarted = true;
+        }
+    }
 }
 
 function updateDemo(){
@@ -213,26 +271,45 @@ function updateDemo(){
 function updateNeverFoundMarker(){
     if(bTracking){
         console.log('1st marker found');
-        curState = AppStateEnum.STATE_START_FADE_IN;
-        startTime = lastTimeMsec/1000;
-        stopTime = startTime+fadeInTotTime;
+        audioWelcome.play();
+        welcomeSndStartTime = lastTimeMsec/1000;
+        welcomeSndStopTime = welcomeSndStartTime + welcomeSndTime;
+        curState = AppStateEnum.STATE_LOADING_ASSETS;
         //arWorldRoot.add(meshStartLogo);
     }
 }
 
-function updateStartFadeIn(){
-    meshHelmet.rotation.y+=0.01;
-    //meshStartLogo.rotation.x += 0.01;
-    //var now = lastTimeMsec/1000;
-    //console.log('cippa '+now+" "+startTime+" "+stopTime+" "+clock.running);
-    //if(now<stopTime){
-        //var pct = THREE.Math.mapLinear(now, startTime, stopTime, 0.0, 1.0);
-        //meshStartLogo.scale.set(pct, pct, pct);
-    //}else{
-    //    meshStartLogo.scale.set(1,1,1);
-    //    curState = AppStateEnum.STATE_LOADING_SCENE;
-    //}
+function updateLoadingAssets(){
+    if(bLoadedAudio && bLoadedModels){
+        curState = AppStateEnum.STATE_FADE_IN;
+        audioLoop.play();
+        startTime = lastTimeMsec/1000;
+        stopTime = startTime+fadeInTotTime;
+        arWorldRoot.add(meshHelmet);
+        startLoopSound();
+    }
 }
 
-function updateLoadingScene(){}
+function updateFadeIn(){
+    var now = lastTimeMsec/1000;
+    if(now<stopTime){
+        var pct = THREE.Math.mapLinear(now, startTime, stopTime, 0.0, 0.5);
+        meshHelmet.scale.set(pct,pct,pct);
+    }else{
+        meshHelmet.scale.set(0.5,0.5,0.5);
+        curState = AppStateEnum.STATE_LOOPING;
+    }
+    startLoopSound();
+}
 
+function updateLooping(){
+    meshHelmet.rotation.y += 0.01;
+    startLoopSound();
+}
+
+function onClick(){
+    if(!bAudioLoadInited){
+        bAudioLoadInited = true;
+        addAudio();
+    }
+}
