@@ -1,14 +1,16 @@
 var AppStateEnum = {
-    STATE_NEVER_FOUND_MARKER: 0,
-    STATE_LOADING_ASSETS: 1,
-    STATE_FADE_IN: 2,
-    STATE_LOOPING: 3
+    STATE_WAIT_TAP: 0,
+    STATE_NEVER_FOUND_MARKER: 1,
+    STATE_LOADING_ASSETS: 2,
+    STATE_FADE_IN: 3,
+    STATE_LOOPING: 4
 };
 
-var curState = AppStateEnum.STATE_NEVER_FOUND_MARKER;
+var curState = AppStateEnum.STATE_WAIT_TAP;
 var updateDemoFcts = [];
 var meshUnderWorld;
 var meshStartLogo;
+var meshWelcomePanel;
 var startTime;
 var stopTime;
 var fadeInTotTime = 1.0;
@@ -22,22 +24,26 @@ var envMap;
 var audioWelcome;
 var audioLoop;
 
+var topDiv;
+
 var bLoadedModels = false;
 var bLoadedAudio = false;
-var bAudioLoadInited = false;
+var bTouched = false;
+
+var bUseAstronaut = false;
 
 function initDemo(){
    
     document.addEventListener('click', onClick, false);
     document.addEventListener("touchstart", touchStart, false);
 
-    //addAudio();
     addEnvMap();
     addLights();
     //makeUnderWorld();
-    addStartLogo();
+    //addStartLogo();
     addModels();
 
+    updateDemoFcts.push(updateWaitTap);
     updateDemoFcts.push(updateNeverFoundMarker);
     updateDemoFcts.push(updateLoadingAssets);
     updateDemoFcts.push(updateFadeIn);
@@ -209,21 +215,37 @@ function addStartLogo(){
 
 function addModels(){
     var loader = new THREE.GLTFLoader();
-    loader.load('../../models/DamagedHelmet/glTF/DamagedHelmet.gltf', function(gltf){
+    if(!bUseAstronaut){
+        loader.load('../../models/DamagedHelmet/glTF/DamagedHelmet.gltf', function(gltf){
+    					gltf.scene.traverse(function(child){
+					    if(child.isMesh){
+					        child.material.envMap = envMap;
+					    }
+					});
+                    meshHelmet = gltf.scene;
+                    meshHelmet.scale.set(0.5,0.5,0.5);
+                    meshHelmet.scale.set(0,0,0);
+                    meshHelmet.rotation.x -= THREE.Math.degToRad(90);
+                    meshHelmet.position.y += 1;
+                    
+                    bLoadedModels = true;
+                } );
+    }else{
+        loader.load('../../models/astronaut/gltf_out/gltf.gltf', function(gltf){
 					gltf.scene.traverse(function(child){
 					    if(child.isMesh){
 					        child.material.envMap = envMap;
 					    }
 					});
                     meshHelmet = gltf.scene;
-                    //meshHelmet.scale.set(0.5,0.5,0.5);
                     meshHelmet.scale.set(0,0,0);
                     meshHelmet.rotation.x -= THREE.Math.degToRad(90);
-                    meshHelmet.position.y += 1;
-                    //arWorldRoot.add( meshHelmet );
-
+                    meshHelmet.position.y -= 1.5;
+                    
                     bLoadedModels = true;
                 } );
+
+    }
 }
 
 function addAudio(){
@@ -256,10 +278,11 @@ function makeAudio(_ogg, _wav){
 }
 
 function startLoopSound(){
+    if(!bTouched)return;
     if(!bLoopSndStarted){
         var now =  lastTimeMsec/1000;
         if(now>welcomeSndStopTime){
-            audioLoop.play();
+            if(bTouched)audioLoop.play();
             bLoopSndStarted = true;
         }
     }
@@ -267,6 +290,13 @@ function startLoopSound(){
 
 function updateDemo(){
     updateDemoFcts[curState]();
+}
+
+
+function updateWaitTap(){
+    if(bTouched){
+        curState = AppStateEnum.STATE_NEVER_FOUND_MARKER;
+    }
 }
 
 function updateNeverFoundMarker(){
@@ -309,17 +339,27 @@ function updateLooping(){
 }
 
 function onClick(){
-    //console.log('cippa');
-    if(!bAudioLoadInited){
-        bAudioLoadInited = true;
-        addAudio();
-    }
+    
+    firstTouch();
 }
 
 function touchStart(){
     console.log('tap');
-    if(!bAudioLoadInited){
-        bAudioLoadInited = true;
+    firstTouch();
+}
+
+function firstTouch(){
+     if(!bTouched){
+        bTouched = true;
         addAudio();
+        hide(document.getElementById('welcome_panel'));
     }
+
+}
+
+function hide (elements) {
+  elements = elements.length ? elements : [elements];
+  for (var index = 0; index < elements.length; index++) {
+    elements[index].style.display = 'none';
+  }
 }
