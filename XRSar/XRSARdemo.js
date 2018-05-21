@@ -19,7 +19,7 @@ function initDemo(){
     addEnvMap();
     addLights();
     //makeUnderWorld();
-    //addStartLogo();
+    addStartLogo();
     addModels();
 
     updateDemoFcts.push(updateNeverFoundMarker);
@@ -113,6 +113,7 @@ function makeUnderWorld(){
     }); 
 
     meshUnderWorld = new THREE.Mesh(boxGeometry, boxMaterial);
+    //meshUnderWorld.material.envMap = envMap;
     arWorldRoot.add(meshUnderWorld);
 
     var maskW = 2;
@@ -164,45 +165,34 @@ function makeUnderWorld(){
 }
 
 function addStartLogo(){
-    var mtlLoader = new THREE.MTLLoader();
-    mtlLoader.setBaseUrl('../../models/');
-    mtlLoader.setPath('../../models/');
-    mtlLoader.load('SM_TXT_XRS_Logo.mtl', function(materials){
-                   materials.preload();
-                   
-                   var objLoader = new THREE.OBJLoader();
-                   objLoader.setMaterials(materials);
-                   objLoader.load(
-                                  '../../models/SM_TXT_XRS_Logo.obj',
-                                  function(object){
-                                  //onLoaded
-                                  
-                                  object.position.y += 0.5;
-                                  object.rotation.x = THREE.Math.radToDeg(90);
-                                    //object.scale.set(0,0,0);
-                                  arWorldRoot.add(object);
-                                  meshStartLogo = object;
-                                  },
-                                  function(xhr){
-                                  //onProgress
-                                  console.log((xhr.loaded/xhr.total*100)+'% loaded');
-                                  },
-                                  function(error){
-                                  console.log('cannot load model');
-                                  }
-                                  );
-                   
-                   });
+    var loader = new THREE.MTLLoader();
+    loader.setPath('../../models/');
+    loader.load('SM_TXT_XRS_Logo.mtl',function(materials){
+        materials.preload();
+        var objLoader = new THREE.OBJLoader();
+        objLoader.setMaterials(materials);
+        objLoader.setPath('../../models/');
+        objLoader.load('SM_TXT_XRS_Logo.obj', function(object){
+            object.traverse(function(child){
+                if(child.isMesh){
+                    child.material.envMap = envMap;
+                }
+            });
+            meshStartLogo = object;
+            meshStartLogo.position.y += 0.5;
+            meshStartLogo.rotation.x = THREE.Math.radToDeg(90);
+            arWorldRoot.add(meshStartLogo);
+        },
+        function(xhr){},
+        function(error){}
+        );
+    });
+    
 }
 
 function addModels(){
     var loader = new THREE.GLTFLoader();
-				loader.load( '../../models/DamagedHelmet/glTF/DamagedHelmet.gltf', function ( gltf ) {
-					//gltf.scene.traverse( function ( child ) {
-					//	if ( child.isMesh ) {
-					//		child.material.envMap = envMap;
-					//	}
-					//} );
+    loader.load('../../models/DamagedHelmet/glTF/DamagedHelmet.gltf', function(gltf){
 					gltf.scene.traverse(function(child){
 					    if(child.isMesh){
 					        child.material.envMap = envMap;
@@ -211,6 +201,7 @@ function addModels(){
                     meshHelmet = gltf.scene;
                     meshHelmet.scale.set(0.5,0.5,0.5);
                     meshHelmet.rotation.x -= THREE.Math.degToRad(90);
+                    meshHelmet.position.y += 1;
                     arWorldRoot.add( meshHelmet );
                 } );
 }
