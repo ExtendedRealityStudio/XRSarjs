@@ -8,17 +8,19 @@ var curState = AppStateEnum.STATE_NEVER_FOUND_MARKER;
 var updateDemoFcts = [];
 var meshUnderWorld;
 var meshStartLogo;
-var clock;
 var startTime;
 var stopTime;
 var fadeInTotTime = 1.0;
+var meshHelmet;
+var envMap;
 
 function initDemo(){
-    clock = new THREE.Clock();
-
+    
+    addEnvMap();
     addLights();
-    makeUnderWorld();
-    addStartLogo();
+    //makeUnderWorld();
+    //addStartLogo();
+    addModels();
 
     updateDemoFcts.push(updateNeverFoundMarker);
     updateDemoFcts.push(updateStartFadeIn);
@@ -26,7 +28,17 @@ function initDemo(){
 
     onRenderFcts.push(updateDemo);
 
-    clock.start();
+    
+}
+
+function addEnvMap(){
+    var pth = "../../textures/Bridge2/";
+    var format = '.jpg';
+    envMap = new THREE.CubeTextureLoader().load( [
+                    pth + 'posx' + format, pth + 'negx' + format,
+                    pth + 'posy' + format, pth + 'negy' + format,
+                    pth + 'posz' + format, pth + 'negz' + format
+                ] );
 }
 
 function addLights(){
@@ -35,6 +47,10 @@ function addLights(){
     var directionalLight = new THREE.DirectionalLight( 0xffffff, 0.8 );
     directionalLight.position.set( 1, 1, - 1 );
     scene.add( directionalLight );
+    //
+    light = new THREE.HemisphereLight( 0xbbbbff, 0x444422 );
+    light.position.set( 0, 1, 0 );
+    scene.add( light );
 }
 
 function makeUnderWorld(){
@@ -163,7 +179,7 @@ function addStartLogo(){
                                   
                                   object.position.y += 0.5;
                                   object.rotation.x = THREE.Math.radToDeg(90);
-                                    object.scale.set(0,0,0);
+                                    //object.scale.set(0,0,0);
                                   arWorldRoot.add(object);
                                   meshStartLogo = object;
                                   },
@@ -179,6 +195,26 @@ function addStartLogo(){
                    });
 }
 
+function addModels(){
+    var loader = new THREE.GLTFLoader();
+				loader.load( '../../models/DamagedHelmet/glTF/DamagedHelmet.gltf', function ( gltf ) {
+					//gltf.scene.traverse( function ( child ) {
+					//	if ( child.isMesh ) {
+					//		child.material.envMap = envMap;
+					//	}
+					//} );
+					gltf.scene.traverse(function(child){
+					    if(child.isMesh){
+					        child.material.envMap = envMap;
+					    }
+					});
+                    meshHelmet = gltf.scene;
+                    meshHelmet.scale.set(0.5,0.5,0.5);
+                    meshHelmet.rotation.x -= THREE.Math.degToRad(90);
+                    arWorldRoot.add( meshHelmet );
+                } );
+}
+
 function updateDemo(){
     updateDemoFcts[curState]();
 }
@@ -187,15 +223,17 @@ function updateNeverFoundMarker(){
     if(bTracking){
         console.log('1st marker found');
         curState = AppStateEnum.STATE_START_FADE_IN;
-        startTime = clock.elapsedTime;
+        startTime = lastTimeMsec/1000;
         stopTime = startTime+fadeInTotTime;
-        arWorldRoot.add(meshStartLogo);
+        //arWorldRoot.add(meshStartLogo);
     }
 }
 
 function updateStartFadeIn(){
-    //var now = clock.elapsedTime;
-    console.log('cippa '+lastTimeMsec+" "+startTime+" "+stopTime+" "+clock.running);
+    meshHelmet.rotation.y+=0.01;
+    //meshStartLogo.rotation.x += 0.01;
+    //var now = lastTimeMsec/1000;
+    //console.log('cippa '+now+" "+startTime+" "+stopTime+" "+clock.running);
     //if(now<stopTime){
         //var pct = THREE.Math.mapLinear(now, startTime, stopTime, 0.0, 1.0);
         //meshStartLogo.scale.set(pct, pct, pct);
