@@ -28,7 +28,8 @@ var bAudioLoadInited = false;
 
 function initDemo(){
    
-    document.addEventListener('click', onClick, false); 
+    document.addEventListener('click', onClick, false);
+    document.addEventListener("touchstart", touchStart, false);
 
     //addAudio();
     addEnvMap();
@@ -308,6 +309,15 @@ function updateLooping(){
 }
 
 function onClick(){
+    //console.log('cippa');
+    if(!bAudioLoadInited){
+        bAudioLoadInited = true;
+        addAudio();
+    }
+}
+
+function touchStart(){
+    console.log('tap');
     if(!bAudioLoadInited){
         bAudioLoadInited = true;
         addAudio();
