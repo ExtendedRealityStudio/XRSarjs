@@ -1,5 +1,6 @@
 *.swp
-*.sh
+*.pem
+pusher.sh
 .DS_Store
 *DS_Store
 

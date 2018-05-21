@@ -2,176 +2,29 @@
 <meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
 
 <script src='../../XRSar/XRSARsingleMarker.js'></script>
+<script src='../../XRSar/XRSARdemo.js'></script>
 <script src='../../three/three.js'></script>
+<script src='../../three/libs/inflate.min.js'></script>
 <script src='../../three/loaders/OBJLoader.js'></script>
 <script src='../../three/loaders/MTLLoader.js'></script>
 <script src='../../three/loaders/ColladaLoader.js'></script>
+<script src='../../three/loaders/FBXLoader.js'></script>
+<script src='../../three/loaders/GLTFLoader.js'></script>
 <script src='../../ar/build/ar.js'></script>
 <script>THREEx.ArToolkitContext.baseURL = '../'</script>
 
 <body style='margin : 0px; overflow: hidden; font-family: Monospace;'>
 <script>
 
-var cubeRadius = 0.5;
-var mixer;
 var clock = new THREE.Clock();
-var nBalls = 3;
-var bouncingBalls = [];
-for(var i=0;i<nBalls;i++){
-    bouncingBalls.push(new BouncingBall());
-}
 
 initThreeJs();
 initARToolKit();
 initMarker();
 
-addLights();
-addCube();
-addLogo();
-addBalls();
-addAnimation();
+initDemo();
 
 startLoop();
-
-function addLights(){
-    var ambientLight = new THREE.AmbientLight( 0xffffff, 0.2 );
-    scene.add( ambientLight );
-    var directionalLight = new THREE.DirectionalLight( 0xffffff, 0.8 );
-    directionalLight.position.set( 1, 1, - 1 );
-    scene.add( directionalLight );
-}
-
-function addCube(){
-    var geometryCube = new THREE.CubeGeometry(1,1,1);
-    var materialCube = new THREE.MeshBasicMaterial({
-                                                   transparent : true,
-                                                   opacity: 0.3,
-                                                   color: 0x00ff00,
-                                                   side: THREE.DoubleSide
-                                                   });
-                                                   var meshCube = new THREE.Mesh(geometryCube, materialCube);
-                                                   meshCube.scale.set(1.1,1.1,1.1);
-                                                   meshCube.position.y = geometryCube.parameters.height/2;
-                                                   arWorldRoot.add(meshCube);
-}
-
-function addLogo(){
-    var mtlLoader = new THREE.MTLLoader();
-    mtlLoader.setBaseUrl('../../models/');
-    mtlLoader.setPath('../../models/');
-    mtlLoader.load('SM_TXT_XRS_Logo.mtl', function(materials){
-                   materials.preload();
-                   
-                   var objLoader = new THREE.OBJLoader();
-                   objLoader.setMaterials(materials);
-                   objLoader.load(
-                                  '../../models/SM_TXT_XRS_Logo.obj',
-                                  function(object){
-                                  //onLoaded
-                                  //object.scale.set(1,1,1);
-                                  
-                                  object.position.y += 0.5;
-                                  object.rotation.x += THREE.Math.radToDeg(90);
-                                  arWorldRoot.add(object);
-                                  },
-                                  function(xhr){
-                                  //onProgress
-                                  console.log((xhr.loaded/xhr.total*100)+'% loaded');
-                                  },
-                                  function(error){
-                                  console.log('cannot load model');
-                                  }
-                                  );
-                   
-                   });
-                   
-}
-
-function addBalls(){
-    for(var i=0;i<nBalls;i++){
-        arWorldRoot.add(bouncingBalls[i].mesh);
-    }
-    
-    onRenderFcts.push(function(){
-                      for(var i=0;i<nBalls;i++){
-                        bouncingBalls[i].update();
-                      }
-                      
-                      });
-}
-
-function addAnimation(){
-    var loader = new THREE.ColladaLoader();
-    loader.load('../../models/stormtrooper/stormtrooper.dae', function ( collada ) {
-                var animations = collada.animations;
-                var avatar = collada.scene;
-                avatar.scale.set(0.17,0.17,0.17);
-                avatar.rotation.x -= THREE.Math.degToRad(90);
-                avatar.rotation.z += THREE.Math.degToRad(180);
-                avatar.position.z -= 0.55;
-                avatar.position.y += 0.5;
-                mixer = new THREE.AnimationMixer( avatar );
-                var action = mixer.clipAction( animations[ 0 ] ).play();
-                arWorldRoot.add( avatar );
-                });
-                
-                onRenderFcts.push(function(){
-                                  var delta = clock.getDelta();
-                                  if ( mixer !== undefined ) {
-                                    mixer.update( delta );
-                                  }
-                                  });
-}
-
-function BouncingBall(){
-    this.radius = 0.15;
-    this.spdLimiter = 0.1;
-    this.speed =  new THREE.Vector3(Math.random(), Math.random(), Math.random());
-    this.speed.x -= 0.5;
-    this.speed.y -= 0.5;
-    this.speed.z -= 0.5;
-    this.speed.x *= this.spdLimiter;
-    this.speed.y *= this.spdLimiter;
-    this.speed.z *= this.spdLimiter;
-    
-    this.geometry = new THREE.SphereGeometry(this.radius, 8, 8);
-    this.material = new THREE.MeshBasicMaterial({
-                                                transparent : true,
-                                                opacity: 0.7,
-                                                color: 0xffffff
-                                                });
-                                                this.mesh =  new THREE.Mesh(this.geometry, this.material);
-                                                
-    this.addAudioEffect = function(){
-                                        this.audio = new Audio();
-                                        this.audioSrc = document.createElement("source");
-                                        this.audioSrc.src = '../../sound/hit.mp3';
-                                        this.audio.appendChild(this.audioSrc);
-                                    };
-    this.addAudioEffect();
-                                                
-    this.update = function(){
-                                this.mesh.position.x += this.speed.x;
-                                this.mesh.position.y += this.speed.y;
-                                this.mesh.position.z += this.speed.z;
-                                var bHit = false;
-                                if(this.mesh.position.x > cubeRadius || this.mesh.position.x < (-cubeRadius)){
-                                    this.speed.x *= -1.0;
-                                    bHit = true;
-                                }
-                                if(this.mesh.position.y > cubeRadius || this.mesh.position.y < (-cubeRadius)){
-                                    this.speed.y *= -1.0;
-                                    bHit = true;
-                                }
-                                if(this.mesh.position.z > cubeRadius || this.mesh.position.z < (-cubeRadius)){
-                                    this.speed.z *= -1.0;
-                                    bHit = true;
-                                }
-                                if(bHit && bTracking){
-                                    this.audio.play();
-                                }
-                            };
-}
 
 </script>
 </body>
