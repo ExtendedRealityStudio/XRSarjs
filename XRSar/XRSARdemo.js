@@ -6,6 +6,10 @@ var AppStateEnum = {
     STATE_LOOPING: 4
 };
 
+var mMarkerSide = 0.55;
+var mPanelH = 1.0;
+var mPanelW = 1.98;
+
 var curState = AppStateEnum.STATE_WAIT_TAP;
 var updateDemoFcts = [];
 var meshUnderWorld;
@@ -32,10 +36,21 @@ var bTouched = false;
 
 var bUseAstronaut = false;
 
+function realWorldM2arUnits(_m){
+    var _u = 1.0/mMarkerSide*_m;
+    return _u;
+}
+
+function arUnits2realWorld(_u){
+    var _m = mMarkerSide*_u;
+    return _m;
+}
+
 function initDemo(){
    
     document.addEventListener('click', onClick, false);
     document.addEventListener("touchstart", touchStart, false);
+    document.addEventListener('keydown', onKeyDown);
 
     addEnvMap();
     addLights();
@@ -77,6 +92,7 @@ function addLights(){
 }
 
 function makeUnderWorld(){
+
     var boxGeometry = new THREE.Geometry();
     var minX = -0.5;
     var maxX = 0.5;
@@ -138,9 +154,12 @@ function makeUnderWorld(){
     meshUnderWorld = new THREE.Mesh(boxGeometry, boxMaterial);
     //meshUnderWorld.material.envMap = envMap;
     arWorldRoot.add(meshUnderWorld);
+    
+    var uPanelW = realWorldM2arUnits(mPanelW);
+    var uPanelH = realWorldM2arUnits(mPanelH);
 
-    var maskW = 2;
-    var maskH = 2;
+    var maskW = uPanelW;
+    var maskH = uPanelH;
     var maskDiffHor = (maskW - 1.0)/2.0;
     var maskDiffVer = (maskH - 1.0)/2.0;
     var minHor = -maskW/2;
@@ -338,6 +357,20 @@ function updateLooping(){
     startLoopSound();
 }
 
+function onKeyDown(event){
+    var k = event.key;
+    switch(k){
+        case 't':
+            thresholdDown();
+            break
+        case 'T':
+            thresholdUp();
+            break;
+        default:
+            break;
+    }
+}
+
 function onClick(){
     
     firstTouch();
@@ -362,4 +395,21 @@ function hide (elements) {
   for (var index = 0; index < elements.length; index++) {
     elements[index].style.display = 'none';
   }
+}
+
+function thresholdDown(){
+    var _thr = arToolkitContext.arController.getThreshold();
+    _thr--;
+    setThreshold(_thr);
+}
+
+function thresholdUp(){
+    var _thr = arToolkitContext.arController.getThreshold();
+    _thr++;
+    setThreshold(_thr); 
+}
+
+function setThreshold(_thr){
+    arToolkitContext.arController.setThreshold(_thr);
+    console.log("threshold: "+_thr);
 }
