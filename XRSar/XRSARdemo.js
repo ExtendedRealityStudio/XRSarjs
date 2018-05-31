@@ -20,6 +20,10 @@ var welcomeSndStopTime;
 var bLoopSndStarted = false;
 var meshHelmet;
 var envMap;
+var finalSize = 0.8;
+
+var mixer;
+var animations;
 
 var audioWelcome;
 var audioLoop;
@@ -30,7 +34,7 @@ var bLoadedModels = false;
 var bLoadedAudio = false;
 var bTouched = false;
 
-var bUseAstronaut = false;
+var bUseAstronaut = true;
 
 function initDemo(){
    
@@ -231,16 +235,23 @@ function addModels(){
                     bLoadedModels = true;
                 } );
     }else{
-        loader.load('../../models/astronaut/gltf_out/gltf.gltf', function(gltf){
+        loader.load('../../models/Astronaut_Test01/Astronaut.glTF', function(gltf){
 					gltf.scene.traverse(function(child){
 					    if(child.isMesh){
 					        child.material.envMap = envMap;
 					    }
 					});
+                    
                     meshHelmet = gltf.scene;
+                    
+                    console.log("gltf animations: "+gltf.animations);
+			        animations = gltf.animations;
+
+                    finalSize *= 0.01;
                     meshHelmet.scale.set(0,0,0);
-                    meshHelmet.rotation.x -= THREE.Math.degToRad(90);
-                    meshHelmet.position.y -= 1.5;
+                    //meshHelmet.rotation.x -= THREE.Math.degToRad(90);
+                    meshHelmet.position.y -= 1;
+                    meshHelmet.position.x += 0.5;
                     
                     bLoadedModels = true;
                 } );
@@ -288,18 +299,18 @@ function startLoopSound(){
     }
 }
 
-function updateDemo(){
-    updateDemoFcts[curState]();
+function updateDemo(_delta, _now){
+    updateDemoFcts[curState](_delta, _now);
 }
 
 
-function updateWaitTap(){
+function updateWaitTap(_delta, _now){
     if(bTouched){
         curState = AppStateEnum.STATE_NEVER_FOUND_MARKER;
     }
 }
 
-function updateNeverFoundMarker(){
+function updateNeverFoundMarker(_delta, _now){
     if(bTracking){
         console.log('1st marker found');
         audioWelcome.play();
@@ -310,7 +321,7 @@ function updateNeverFoundMarker(){
     }
 }
 
-function updateLoadingAssets(){
+function updateLoadingAssets(_delta, _now){
     if(bLoadedAudio && bLoadedModels){
         curState = AppStateEnum.STATE_FADE_IN;
         audioLoop.play();
@@ -321,21 +332,43 @@ function updateLoadingAssets(){
     }
 }
 
-function updateFadeIn(){
+function updateFadeIn(_delta, _now){
     var now = lastTimeMsec/1000;
     if(now<stopTime){
-        var pct = THREE.Math.mapLinear(now, startTime, stopTime, 0.0, 0.5);
+        var pct = THREE.Math.mapLinear(now, startTime, stopTime, 0.0, finalSize);
         meshHelmet.scale.set(pct,pct,pct);
     }else{
-        meshHelmet.scale.set(0.5,0.5,0.5);
+        meshHelmet.scale.set(finalSize,finalSize,finalSize);
         curState = AppStateEnum.STATE_LOOPING;
+        
+        if(animations){
+            if(animations.length){
+                if(animations && animations.length){
+                    mixer = new THREE.AnimationMixer(meshHelmet);
+                    for(var i=0;i<animations.length;i++){
+                        console.log("triggering animation "+i);
+                        var animation = animations[i];
+                        var action = mixer.clipAction(animation);
+                        action.play();
+                    }
+                }
+            }else{
+                console.log("model has 0 animations");
+            }
+        }else{
+            console.log("model animations is undefined");
+        }
+        
     }
     startLoopSound();
 }
 
-function updateLooping(){
-    meshHelmet.rotation.y += 0.01;
+function updateLooping(_delta, _now){
+    meshHelmet.rotation.y += 0.003;
     startLoopSound();
+    if(mixer){
+        mixer.update(_delta);
+    }
 }
 
 function onClick(){
