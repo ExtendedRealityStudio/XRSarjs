@@ -17,6 +17,14 @@
 //
 // startLoop();
 
+var MarkerStateEnum = {
+    MARKER_NOT_FOUND: 0,
+    MARKER_JUST_LOST: 1,
+    MARKER_JUST_FOUND: 2,
+    MARKER_FOUND: 3
+};
+var curMarkerState = MarkerStateEnum.MARKER_NOT_FOUND;
+
 var renderer;
 var onRenderFcts = [];
 var scene;
@@ -26,7 +34,6 @@ var controls;
 var arToolkitSource;
 var arToolkitContext;
 
-var bTracking = false;
 var markerRoot;
 var artoolkitMarker;
 var smoothedRoot;
@@ -35,6 +42,8 @@ var smoothedControls;
 var arWorldRoot;
 
 var lastTimeMsec = null;
+var lastTimeMarkerEvent = 0;
+var maxTimeMarkerEvent = 1000/30;
 
 function initThreeJs(){
     renderer = new THREE.WebGLRenderer({alpha: true});
@@ -65,10 +74,10 @@ function initARToolKit(){
                                                    });
     
     arToolkitContext.init(function onCompleted(){camera.projectionMatrix.copy(arToolkitContext.getProjectionMatrix());});
-    
+
     onRenderFcts.push(function(){
-                      if(arToolkitSource.ready === false) return;
-                      arToolkitContext.update(arToolkitSource.domElement);
+                        if(arToolkitSource.ready === false) return;
+                        arToolkitContext.update(arToolkitSource.domElement);
                       });
 }
 
@@ -87,7 +96,7 @@ function initMarker(){
                                                   type : 'pattern',
                                                   patternUrl : THREEx.ArToolkitContext.baseURL + '../data/data/XRSmarker.patt'
                                                   });
-    artoolkitMarker.addEventListener('markerFound', function(event){bTracking=true;});
+    artoolkitMarker.addEventListener('markerFound', onMarkerEvent);//function(event){bTracking=true;});
     
     smoothedRoot = new THREE.Group();
     scene.add(smoothedRoot);
@@ -97,14 +106,15 @@ function initMarker(){
                                                      lerpQuaternion: 0.3,
                                                      lerpScale: 1
                                                      });
-    onRenderFcts.push(function(delta){smoothedControls.update(markerRoot);});
+    onRenderFcts.push(function(delta){
+        smoothedControls.update(markerRoot);
+    });
     
     arWorldRoot = smoothedRoot;
     
 }
 
 function animate(nowMsec){
-    bTracking = false;
     requestAnimationFrame(animate);
     lastTimeMsec = lastTimeMsec || nowMsec-1000/60;
     var deltaMsec = Math.min(200, nowMsec - lastTimeMsec);
@@ -115,5 +125,39 @@ function animate(nowMsec){
 
 function startLoop(){
     onRenderFcts.push(function(){renderer.render(scene, camera);});
+    onRenderFcts.push(updateMarker);
     requestAnimationFrame(animate);
+}
+
+function onMarkerLost(){
+    console.log('marker lost');
+}
+
+function onNewMarker(){
+    console.log("new marker");
+}
+
+function onMarkerEvent(){
+    lastTimeMarkerEvent = lastTimeMsec; 
+}
+
+function updateMarker(){
+    var d = lastTimeMsec-lastTimeMarkerEvent;
+    if(d>maxTimeMarkerEvent){
+        //console.log("not found");
+        if(curMarkerState>MarkerStateEnum.MARKER_JUST_LOST){
+            curMarkerState = MarkerStateEnum.MARKER_JUST_LOST;
+            onMarkerLost();
+        }else{
+            curMarkerState = MarkerStateEnum.MARKER_NOT_FOUND;
+        }
+    }else{
+        //console.log("found");
+        if(curMarkerState < MarkerStateEnum.MARKER_JUST_FOUND){
+            curMarkerState = MarkerStateEnum.MARKER_JUST_FOUND;
+            onNewMarker();
+        }else{
+            curMarkerState = MarkerStateEnum.MARKER_FOUND;
+        }
+    }
 }
