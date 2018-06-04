@@ -2,24 +2,17 @@ var AppStateEnum = {
     STATE_WAIT_TAP: 0,
     STATE_NEVER_FOUND_MARKER: 1,
     STATE_LOADING_ASSETS: 2,
-    STATE_INSIDE_ANIM: 3,
-    STATE_OUTSIDE_ANIM: 4,
-    STATE_FADE_IN: 5,
-    STATE_LOOPING: 6
+    STATE_FADE_IN: 3,
+    STATE_LOOPING: 4
 };
 
 var curState = AppStateEnum.STATE_WAIT_TAP;
 var updateDemoFcts = [];
 var meshUnderWorld;
-var meshMarkerBorder;
-var meshBorderWalls;
-var meshMarkerInside;
 var meshStartLogo;
 var meshWelcomePanel;
 var startTime;
 var stopTime;
-var insideAnimTotTime = 1.0;
-var outsideAnimTotTime = 1.0;
 var fadeInTotTime = 1.0;
 var welcomeSndTime = 4.0;
 var welcomeSndStartTime;
@@ -27,9 +20,7 @@ var welcomeSndStopTime;
 var bLoopSndStarted = false;
 var meshHelmet;
 var envMap;
-var finalSize = 0.4;
-var finalInsidePos;
-var finalOutsidePos;
+var finalSize = 0.8;
 
 var mixer;
 var animations;
@@ -52,18 +43,19 @@ function initDemo(){
 
     addEnvMap();
     addLights();
-    makeUnderWorld();
+    //makeUnderWorld();
+    //addStartLogo();
     addModels();
 
     updateDemoFcts.push(updateWaitTap);
     updateDemoFcts.push(updateNeverFoundMarker);
     updateDemoFcts.push(updateLoadingAssets);
-    updateDemoFcts.push(updateAnimInside);
-    updateDemoFcts.push(updateAnimOutside);
     updateDemoFcts.push(updateFadeIn);
     updateDemoFcts.push(updateLooping);
 
     onRenderFcts.push(updateDemo);
+
+    
 }
 
 function addEnvMap(){
@@ -88,18 +80,83 @@ function addLights(){
     scene.add( light );
 }
 
-function makeMaskGeometry(_maskW, _maskH, _holeSz){
-    var maskDiffHor = (_maskW - _holeSz)/2.0;
-    var maskDiffVer = (_maskH - _holeSz)/2.0;
-    var minHor = -_maskW/2;
-    var maxHor = _maskW/2;
-    var minVer = -_maskH/2;
-    var maxVer = _maskH/2;
+function makeUnderWorld(){
+    var boxGeometry = new THREE.Geometry();
+    var minX = -0.5;
+    var maxX = 0.5;
+    var minY = -1;
+    var maxY = 0;
+    var minZ = -0.5;
+    var maxZ = 0.5;
+    
+    //top
+    boxGeometry.vertices.push(new THREE.Vector3(minX,minY,minZ));
+    boxGeometry.vertices.push(new THREE.Vector3(maxX,minY,minZ));
+    boxGeometry.vertices.push(new THREE.Vector3(maxX,maxY,minZ));
+    boxGeometry.vertices.push(new THREE.Vector3(minX,maxY,minZ));
+    
+    //bottom
+    boxGeometry.vertices.push(new THREE.Vector3(minX,minY,maxZ));
+    boxGeometry.vertices.push(new THREE.Vector3(maxX,minY,maxZ));
+    boxGeometry.vertices.push(new THREE.Vector3(maxX,maxY,maxZ));
+    boxGeometry.vertices.push(new THREE.Vector3(minX,maxY,maxZ));
+
+    boxGeometry.vertices.push(new THREE.Vector3(minX,minY,minZ));
+    boxGeometry.vertices.push(new THREE.Vector3(minX,maxY,minZ));
+    boxGeometry.vertices.push(new THREE.Vector3(minX,maxY,maxZ));
+    boxGeometry.vertices.push(new THREE.Vector3(minX,minY,maxZ));
+
+    boxGeometry.vertices.push(new THREE.Vector3(maxX,minY,minZ));
+    boxGeometry.vertices.push(new THREE.Vector3(maxX,maxY,minZ));
+    boxGeometry.vertices.push(new THREE.Vector3(maxX,maxY,maxZ));
+    boxGeometry.vertices.push(new THREE.Vector3(maxX,minY,maxZ));
+
+    boxGeometry.vertices.push(new THREE.Vector3(minX,minY,minZ));
+    boxGeometry.vertices.push(new THREE.Vector3(minX,minY,maxZ));
+    boxGeometry.vertices.push(new THREE.Vector3(maxX,minY,maxZ));
+    boxGeometry.vertices.push(new THREE.Vector3(maxX,minY,minZ));
+
+    boxGeometry.faces.push(new THREE.Face3(0,2,1));
+    boxGeometry.faces.push(new THREE.Face3(0,3,2));
+
+    boxGeometry.faces.push(new THREE.Face3(4,5,6));
+    boxGeometry.faces.push(new THREE.Face3(4,6,7));
+
+    boxGeometry.faces.push(new THREE.Face3(8,10,9));
+    boxGeometry.faces.push(new THREE.Face3(8,11,10));
+
+    boxGeometry.faces.push(new THREE.Face3(12,13,14));
+    boxGeometry.faces.push(new THREE.Face3(12,14,15));
+
+    boxGeometry.faces.push(new THREE.Face3(16,18,17));
+    boxGeometry.faces.push(new THREE.Face3(16,19,18));
+
+    var boxMaterial = new THREE.MeshPhongMaterial({
+        color: 0xffffff,
+        opacity: 1.0,
+        transparent: false,
+        side: THREE.BackSide,
+        shading: THREE.FlatShading
+    }); 
+
+    meshUnderWorld = new THREE.Mesh(boxGeometry, boxMaterial);
+    //meshUnderWorld.material.envMap = envMap;
+    arWorldRoot.add(meshUnderWorld);
+
+    var maskW = 2;
+    var maskH = 2;
+    var maskDiffHor = (maskW - 1.0)/2.0;
+    var maskDiffVer = (maskH - 1.0)/2.0;
+    var minHor = -maskW/2;
+    var maxHor = maskW/2;
+    var minVer = -maskH/2;
+    var maxVer = maskH/2;
     var mid1Hor = minHor+maskDiffHor;
     var mid2Hor = maxHor-maskDiffHor;
     var mid1Ver = minVer+maskDiffVer;
     var mid2Ver = maxVer-maskDiffVer;
 
+    //var geomPTop = new THREE.PlaneGeometry(maskW,maskDiffVer);
     var geomMask = new THREE.Geometry();
     // 0--------1
     // 8 4----5 9
@@ -127,65 +184,11 @@ function makeMaskGeometry(_maskW, _maskH, _holeSz){
     geomMask.faces.push(new THREE.Face3(10,7,4));
     geomMask.faces.push(new THREE.Face3(5,6,9));
     geomMask.faces.push(new THREE.Face3(6,11,9));
-    
-    return geomMask;
-}
 
-function makeUnderWorld(){
-    var boxSz = 1.05;
-    var geomUw = new THREE.CubeGeometry(boxSz,boxSz*2,boxSz);
-    var txtLoader = new THREE.TextureLoader();
-    var txtUw = txtLoader.load('../../textures/tiles.jpg');
-    var matUw = new THREE.MeshLambertMaterial({
-        transparent: true,
-        map: txtUw,
-        side: THREE.BackSide
-    });
+    var matMask = new THREE.MeshBasicMaterial({color: 0xffffff, side: THREE.FrontSide});
 
-    meshUnderWorld = new THREE.Mesh(geomUw, matUw);
-    meshUnderWorld.position.y = -boxSz;
-
-    var maskW = 9;
-    var maskH = 9;
-    
-    var geomCloak = makeMaskGeometry(maskW, maskH, boxSz);
-    var matCloak = new THREE.MeshBasicMaterial( {
-        //color: 0xffff00, 
-        side: THREE.DoubleSide,
-        colorWrite: false
-    });
-    var meshCloak = new THREE.Mesh( geomCloak, matCloak );
-    
-    var geomBorder = makeMaskGeometry(boxSz, boxSz, boxSz/2);
-    var matBorder =  new THREE.MeshBasicMaterial( {
-        color: 0x000000, 
-        side: THREE.FrontSide
-    });
-    meshMarkerBorder = new THREE.Mesh(geomBorder, matBorder);
-
-    var geomBorderWalls = new THREE.CubeGeometry(boxSz/2, boxSz, boxSz/2);
-    meshBorderWalls = new THREE.Mesh(geomBorderWalls, matUw);
-    meshBorderWalls.position.y = -boxSz/2;
-
-    var txtLoaderInside = new THREE.TextureLoader();
-    var txtInside = txtLoaderInside.load('../../textures/markerInside.png');
-    var geomInside = new THREE.PlaneGeometry(boxSz/2, boxSz/2);
-    var matInside = new THREE.MeshLambertMaterial({
-        map: txtInside,
-        side: THREE.FrontSide
-    });
-    meshMarkerInside = new THREE.Mesh(geomInside, matInside);
-    meshMarkerInside.rotation.x = -Math.PI/2;
-
-    finalInsidePos = -boxSz*0.95;
-    finalOutsidePos = -boxSz;
-    
-    meshMarkerBorder.add(meshBorderWalls);
-    meshMarkerBorder.add(meshMarkerInside);
-
-    arWorldRoot.add(meshUnderWorld);
-    arWorldRoot.add(meshCloak);
-    arWorldRoot.add(meshMarkerBorder);
+    var meshMask = new THREE.Mesh(geomMask, matMask);
+    arWorldRoot.add(meshMask);
 }
 
 function addStartLogo(){
@@ -247,10 +250,8 @@ function addModels(){
                     finalSize *= 0.01;
                     meshHelmet.scale.set(0,0,0);
                     //meshHelmet.rotation.x -= THREE.Math.degToRad(90);
-                    //meshHelmet.position.y -= 1;
-                    //meshHelmet.position.x += 0.5;
-                    meshHelmet.position.z += 3.1;
-                    meshHelmet.position.y -= 1.0;
+                    meshHelmet.position.y -= 1;
+                    meshHelmet.position.x += 0.5;
                     
                     bLoadedModels = true;
                 } );
@@ -298,32 +299,6 @@ function startLoopSound(){
     }
 }
 
-function playWelcomeSound(){
-    audioWelcome.play();
-    welcomeSndStartTime = lastTimeMsec/1000;
-    welcomeSndStopTime = welcomeSndStartTime + welcomeSndTime;
-}
-
-function goFadeIn(){
-    curState = AppStateEnum.STATE_FADE_IN;
-    startTime = lastTimeMsec/1000;
-    stopTime = startTime+fadeInTotTime;
-    //arWorldRoot.add(meshHelmet);
-    meshMarkerInside.add(meshHelmet);
-}
-
-function goAnimInside(){
-    curState = AppStateEnum.STATE_INSIDE_ANIM;
-    startTime = lastTimeMsec/1000;
-    stopTime = startTime+insideAnimTotTime;
-}
-
-function goAnimOutside(){
-    curState = AppStateEnum.STATE_OUTSIDE_ANIM;
-    startTime = lastTimeMsec/1000;
-    stopTime = startTime+outsideAnimTotTime;
-}
-
 function updateDemo(_delta, _now){
     updateDemoFcts[curState](_delta, _now);
 }
@@ -338,36 +313,22 @@ function updateWaitTap(_delta, _now){
 function updateNeverFoundMarker(_delta, _now){
     if(bTracking){
         console.log('1st marker found');
-        playWelcomeSound();
+        audioWelcome.play();
+        welcomeSndStartTime = lastTimeMsec/1000;
+        welcomeSndStopTime = welcomeSndStartTime + welcomeSndTime;
         curState = AppStateEnum.STATE_LOADING_ASSETS;
+        //arWorldRoot.add(meshStartLogo);
     }
 }
 
 function updateLoadingAssets(_delta, _now){
     if(bLoadedAudio && bLoadedModels){
-        goAnimInside();
-    }
-}
-
-function updateAnimInside(_delta, _now){
-    var now = lastTimeMsec/1000;
-    if(now<stopTime){
-        var pct = THREE.Math.mapLinear(now, startTime, stopTime, 0.0, finalInsidePos);
-        meshMarkerInside.position.y = pct;
-    }else{
-        meshMarkerInside.position.y = finalInsidePos;
-        goAnimOutside();
-    }
-}
-
-function updateAnimOutside(_delta, _now){
-    var now = lastTimeMsec/1000;
-    if(now<stopTime){
-        var pct = THREE.Math.mapLinear(now, startTime, stopTime, 0.0, finalOutsidePos);
-        meshMarkerBorder.position.y = pct;
-    }else{
-        meshMarkerBorder.position.y = finalOutsidePos;
-        goFadeIn();
+        curState = AppStateEnum.STATE_FADE_IN;
+        audioLoop.play();
+        startTime = lastTimeMsec/1000;
+        stopTime = startTime+fadeInTotTime;
+        arWorldRoot.add(meshHelmet);
+        startLoopSound();
     }
 }
 
@@ -411,6 +372,7 @@ function updateLooping(_delta, _now){
 }
 
 function onClick(){
+    
     firstTouch();
 }
 
