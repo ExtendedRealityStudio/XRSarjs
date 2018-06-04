@@ -336,7 +336,7 @@ function updateWaitTap(_delta, _now){
 }
 
 function updateNeverFoundMarker(_delta, _now){
-    if(bTracking){
+    if(curMarkerState > MarkerStateEnum.MARKER_JUST_LOST){
         console.log('1st marker found');
         playWelcomeSound();
         curState = AppStateEnum.STATE_LOADING_ASSETS;

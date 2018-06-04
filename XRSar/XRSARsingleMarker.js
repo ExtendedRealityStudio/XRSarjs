@@ -17,6 +17,8 @@
 //
 // startLoop();
 
+ 
+
 var MarkerStateEnum = {
     MARKER_NOT_FOUND: 0,
     MARKER_JUST_LOST: 1,
@@ -101,7 +103,12 @@ function initMarker(){
     smoothedRoot = new THREE.Group();
     scene.add(smoothedRoot);
     
-    smoothedControls = new THREEx.ArSmoothedControls(smoothedRoot, {
+    /*smoothedControls = new THREEx.ArSmoothedControls(smoothedRoot, {
+                                                     lerpPosition: 0.4,
+                                                     lerpQuaternion: 0.3,
+                                                     lerpScale: 1
+                                                     });*/
+    smoothedControls = new XRSar.ArControls(smoothedRoot, {
                                                      lerpPosition: 0.4,
                                                      lerpQuaternion: 0.3,
                                                      lerpScale: 1
@@ -131,10 +138,12 @@ function startLoop(){
 
 function onMarkerLost(){
     console.log('marker lost');
+    smoothedControls.onMarkerLost();
 }
 
 function onNewMarker(){
     console.log("new marker");
+    smoothedControls.onNewMarker();
 }
 
 function onMarkerEvent(){
