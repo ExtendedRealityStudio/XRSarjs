@@ -56,7 +56,11 @@ function initDemo(){
     addLights();
     makeUnderWorld();
     addModels();
+
+    
 }
+
+
 
 //html5
 function onClick(){

@@ -123,6 +123,15 @@ XRSar.Ar = function(){
     this.marker = new XRSar.Marker();
 };
 
+XRSar.Ar.prototype.initSingleMarker = function(){
+    var _this = this;
+    _this.threeJsContext.init();
+    _this.artoolkit.init(_this.threeJsContext);
+    _this.addARToolkitCallbacks();
+    _this.marker.init(_this.threeJsContext, _this.artoolkit);
+    _this.addMarkerCallbacks();
+}
+
 XRSar.Ar.prototype.addARToolkitCallbacks = function(){
     this.onRenderFcts.push(function(){
         if(this.artoolkit.arToolkitSource.ready === false) return;

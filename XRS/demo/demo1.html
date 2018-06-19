@@ -27,22 +27,11 @@
 </div>
 <script>
 var ar = new XRSar.Ar();
-ar.threeJsContext.init();
-ar.artoolkit.init(ar.threeJsContext);
-ar.addARToolkitCallbacks();
-ar.marker.init(ar.threeJsContext, ar.artoolkit);
-ar.addMarkerCallbacks();
+ar.initSingleMarker();
 
 initDemo();
 
 ar.startLoop();
-//initThreeJs();
-//initARToolKit();
-//initMarker();
-
-//initDemo();
-
-//startLoop();
 
 </script>
 </body>
